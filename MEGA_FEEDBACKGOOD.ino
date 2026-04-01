@@ -40,7 +40,7 @@ const uint8_t PIN_BRAKE_HALL_B = 3;
 // -------------------- MCP4725 --------------------
 const uint8_t  MCP4725_ADDR      = 0x60;
 const uint16_t DAC_MAX           = 4095;
-const uint16_t THROTTLE_MAX_DAC  = 650;
+const uint16_t THROTTLE_MAX_DAC  = 1100;
 
 const uint8_t PIN_I2C_SDA = 20;
 const uint8_t PIN_I2C_SCL = 21;
@@ -217,7 +217,7 @@ bool setThrottleDAC(uint16_t val) {
 // -------------------- Safe outputs --------------------
 void forceSafeOutputs() {
   setThrottleDAC(0);
-  steerStop();
+  //steerStop();
   brakeRelease();
 }
 
@@ -457,32 +457,29 @@ void loop() {
 
   updateHeartbeat();
 
-  if (!homingDone) {
-    steerStop();
-  } else {
-    // Steering
-      // Steering with hard limits
-      long scRaw = readSteerCounts();   // current hall position
-      long sc    = scRaw - steerZeroOffset;
+  // Steering ALWAYS allowed after homing
+  if (homingDone) {
+     long scRaw = readSteerCounts();
+     long sc    = scRaw - steerZeroOffset;
+
       if (cmdSteer > STEER_CMD_THRESH) {
-          // Try to extend (positive direction)
-          if (sc < 2400) {
-              steerExtend();
+         if (sc < 2400) {
+             steerExtend();
           } else {
-              steerStop();   // hit +1000 limit
+              steerStop();
           }
       }
       else if (cmdSteer < -STEER_CMD_THRESH) {
-          // Try to retract (negative direction)
-          if (sc > -1000) {
-              steerRetract();
-          } else {
-              steerStop();   // hit -1000 limit
+         if (sc > -1000) {
+             steerRetract();
+         } else {
+             steerStop();
           }
-      }
+     }
       else {
           steerStop();
       }
+
       // Brake with hard limits
       long bc = readBrakeCounts();   // current brake hall position
 
@@ -505,13 +502,12 @@ void loop() {
 
     // Throttle
     uint16_t dac = 0;
-    if (!cmdBrake) {
-      dac = (uint16_t)constrain(
-        map(cmdThrottle, 0, 1000, 0, THROTTLE_MAX_DAC),
-        0,
-        THROTTLE_MAX_DAC
-      );
-    }
+    dac = (uint16_t)constrain(
+      map(cmdThrottle, 0, 1000, 0, THROTTLE_MAX_DAC),
+      0,
+      THROTTLE_MAX_DAC
+    );
+
 
     setThrottleDAC(dac);
   }
@@ -535,5 +531,8 @@ void loop() {
     BT.print(readSteerCounts());
     BT.print(" brakeCounts=");
     BT.println(readBrakeCounts());
+    BT.print("ARM=");
+    BT.println(armed);
+
   }
 }
