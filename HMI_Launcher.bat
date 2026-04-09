@@ -1,0 +1,1 @@
+powershell.exe -ExecutionPolicy Bypass -File "C:\Users\JACKS\Documents\HMI\startup_hmi.ps1"
